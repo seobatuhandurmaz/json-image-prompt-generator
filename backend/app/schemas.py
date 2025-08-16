@@ -15,6 +15,7 @@ class FormDataIn(BaseModel):
     fontFamily: str
     backgroundColor: ColorWithAlpha
     style: str
+    # multipart sürümünde görsel dosya ile gelir; JSON sürümünde base64 gelebilir
     referenceImageBase64: Optional[str] = None
 
 class PromptOut(BaseModel):
