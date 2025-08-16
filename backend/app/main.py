@@ -1,3 +1,5 @@
+# backend/app/main.py
+
 import os
 import io
 import base64
@@ -10,7 +12,6 @@ from fastapi import (
     Form,
     Request,
     HTTPException,
-    Header,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
@@ -22,7 +23,7 @@ from .prompt_builder import build_prompt
 # =========================
 # Environment / Config
 # =========================
-API_KEY = (os.getenv("APP_API_KEY", "") or "").strip()  # boşsa auth kapalı
+# Not: APP_API_KEY artık istemciden beklenmiyor; burada kullanılmıyor.
 ALLOW_ORIGINS = [
     o.strip().rstrip("/")
     for o in os.getenv("ALLOW_ORIGINS", "*").split(",")
@@ -39,26 +40,13 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOW_ORIGINS or ["*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
 # =========================
 # Guards
 # =========================
-def _require_auth(x_api_key: str | None):
-    """
-    Eğer APP_API_KEY set edildiyse, başlıktan birebir eşleşme ister.
-    Set edilmemişse (""), kimlik doğrulama devre dışı kalır.
-    """
-    if not API_KEY:
-        return
-    if not x_api_key:
-        raise HTTPException(status_code=401, detail="Missing API key")
-    if x_api_key.strip() != API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid API key")
-
-
 def _check_referer(referer: str | None):
     """
     WP_ORIGIN verilmişse, gelen isteğin Referer origin’i aynı olmalı.
@@ -71,7 +59,6 @@ def _check_referer(referer: str | None):
     if urlparse(referer).netloc != urlparse(WP_ORIGIN).netloc:
         raise HTTPException(status_code=403, detail="Bad Referer")
 
-
 # =========================
 # Endpoints
 # =========================
@@ -79,17 +66,13 @@ def _check_referer(referer: str | None):
 def health():
     return {"ok": True}
 
-
 @app.post("/generate", response_model=PromptOut)
 async def generate_prompt(
     request: Request,
-    # Header'dan oku (X-API-Key). alias ile ismi açıkça belirtiyoruz.
-    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
-    # multipart form alanları
     json_data: str = Form(None),
     reference_image: UploadFile | None = File(None),
 ):
-    _require_auth(x_api_key)
+    # Sadece referer/domain kontrolü
     _check_referer(request.headers.get("referer"))
 
     if not json_data:
@@ -102,7 +85,6 @@ async def generate_prompt(
 
     ref_url = None
     if reference_image:
-        # Görseli okuyup data URL'e çeviriyoruz (base64). Böylece uzun URL hatası olmaz.
         buf = await reference_image.read()
         # Basit görsel doğrulaması (opsiyonel)
         try:
@@ -116,14 +98,12 @@ async def generate_prompt(
     prompt = build_prompt(payload, reference_image_url=ref_url)
     return {"prompt": prompt}
 
-
 @app.post("/generate-json", response_model=PromptOut)
 async def generate_prompt_json(
     payload: FormDataIn,
     request: Request,
-    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
 ):
-    _require_auth(x_api_key)
+    # Sadece referer/domain kontrolü
     _check_referer(request.headers.get("referer"))
 
     prompt = build_prompt(payload, reference_image_url=payload.referenceImageBase64)
