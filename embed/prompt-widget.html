@@ -1,4 +1,4 @@
-<!-- Image Prompt Builder (no brand names) -->
+<!-- Image Prompt Builder (no brand / no preview) -->
 <div id="prompt-builder" style="max-width:920px;margin:24px auto;font-family:system-ui,-apple-system,Segoe UI,Roboto">
   <style>
     :root{--bg:#fff;--fg:#111;--muted:#555;--border:#d7d7d7;--field-bg:#fff;--field-fg:#111;--brand:#22a316;}
@@ -24,11 +24,11 @@
     <div class="tip">Palet seçin veya renkleri ince ayarlayın; ardından “JSON Oluştur”a basın.</div>
 
     <div class="row">
-      <input id="ratio" placeholder="Aspect Ratio (örn: 1024x440)" value="Aspect Ratio (örn: 1024x440)" />
-      <input id="style" placeholder="Sanatsal Stil" value="Stil" />
+      <input id="ratio" placeholder="Aspect Ratio (örn: 1024x440)" value="1024x440" />
+      <input id="style" placeholder="Sanatsal Stil" value="cozy, teenage drama" />
     </div>
     <div class="row">
-      <input id="theme" placeholder="Tema (ör: teenage, drama, list)" value="Tema (ör: teenage, drama, list)" />
+      <input id="theme" placeholder="Tema (ör: teenage, drama, list)" value="teenage, drama, list" />
     </div>
 
     <div class="row" style="margin-top:6px"><span class="tag">Palette</span></div>
@@ -84,10 +84,11 @@
 
 <script>
 (function(){
-  // --- AYAR ---
+  // ---- AYARLAR ----
   const API_URL = "https://json-image-prompt-generator-production.up.railway.app/generate"; // multipart endpoint
+  const API_KEY = ""; // (opsiyonel) APP_API_KEY kullanıyorsan buraya koy; boşsa header gönderilmez
 
-  // --- PALET VERİSİ ---
+  // ---- PALETLER ----
   const PRESETS = [
     { name:"Sunset Pop",  colors:["#eb7865","#e94da1","#121212"],  bg:"#ffffff" },
     { name:"Ocean Mist",  colors:["#76b5c5","#3e8e9f","#0b3c49"],  bg:"#ffffff" },
@@ -99,17 +100,22 @@
     { name:"Slate Blue",  colors:["#93c5fd","#60a5fa","#1e3a8a"],  bg:"#ffffff" }
   ];
 
-  // --- KISA SEÇİCİ ---
+  // ---- Yardımcılar ----
   const $ = (id)=>document.getElementById(id);
+  function updateAlphaLabels(){
+    $("bgAVal").textContent=(+$("bgAlpha").value).toFixed(2);
+    $("a1Val").textContent=(+$("a1").value).toFixed(2);
+    $("a2Val").textContent=(+$("a2").value).toFixed(2);
+    $("a3Val").textContent=(+$("a3").value).toFixed(2);
+  }
 
-  // --- PALET GRID ---
+  // ---- Palet UI ----
   const grid = $("palGrid");
   PRESETS.forEach((p, i)=>{
     const el = document.createElement("div");
-    el.className = "palette";
-    el.title = p.name;
+    el.className = "palette"; el.title = p.name;
     const row = document.createElement("div"); row.className="swrow";
-    p.colors.forEach(c=>{ const sw=document.createElement("div"); sw.className="sw"; sw.style.background=c; row.appendChild(sw); });
+    p.colors.forEach(c=>{const sw=document.createElement("div"); sw.className="sw"; sw.style.background=c; row.appendChild(sw);});
     el.appendChild(row);
     const bg = document.createElement("div"); bg.className="sw"; bg.style.background=p.bg; el.appendChild(bg);
     el.addEventListener("click", ()=>{
@@ -119,22 +125,14 @@
     });
     grid.appendChild(el);
   });
-  // varsayılan
   grid.firstChild.classList.add("selected");
-
-  function updateAlphaLabels(){
-    $("bgAVal").textContent=(+$("bgAlpha").value).toFixed(2);
-    $("a1Val").textContent=(+$("a1").value).toFixed(2);
-    $("a2Val").textContent=(+$("a2").value).toFixed(2);
-    $("a3Val").textContent=(+$("a3").value).toFixed(2);
-  }
   ["bgAlpha","a1","a2","a3"].forEach(id=>$(id).addEventListener("input",updateAlphaLabels));
   updateAlphaLabels();
 
-  // --- GÖNDER (MULTIPART) ---
+  // ---- Gönder (multipart) ----
   $("create").onclick = async () => {
-    try {
-      $("create").disabled = true; $("create").textContent = "Oluşturuluyor...";
+    try{
+      $("create").disabled=true; $("create").textContent="Oluşturuluyor...";
 
       const payload = {
         aspectRatio: $("ratio").value,
@@ -156,8 +154,7 @@
       fd.append("json_data", JSON.stringify(payload));
       const file = $("ref").files?.[0];
       if (file) {
-        // İSTEĞE BAĞLI: aşırı büyük dosyayı erkenden reddet (ör. > 8MB)
-        if (file.size > 8 * 1024 * 1024) { 
+        if (file.size > 8*1024*1024) {
           $("out").textContent = JSON.stringify({error:"Referans görsel 8MB'den büyük."}, null, 2);
           $("create").disabled=false; $("create").textContent="JSON Oluştur";
           return;
@@ -165,20 +162,23 @@
         fd.append("reference_image", file, file.name);
       }
 
-      const resp = await fetch(API_URL, { method: "POST", body: fd });
+      const headers = {};
+      if (API_KEY) headers["X-API-Key"] = API_KEY; // opsiyonel
+
+      const resp = await fetch(API_URL, { method:"POST", body: fd, headers });
       const data = await resp.json();
       $("out").textContent = JSON.stringify(data, null, 2);
-    } catch (e) {
+    }catch(e){
       $("out").textContent = JSON.stringify({error:String(e)}, null, 2);
-    } finally {
-      $("create").disabled = false; $("create").textContent = "JSON Oluştur";
+    }finally{
+      $("create").disabled=false; $("create").textContent="JSON Oluştur";
     }
   };
 
-  $("copy").onclick = async () => {
+  $("copy").onclick = async ()=>{
     const txt = $("out").textContent || "";
-    try { await navigator.clipboard.writeText(txt); $("copy").textContent="Kopyalandı!"; }
-    catch(_) { $("copy").textContent="Kopyalanamadı"; }
+    try{ await navigator.clipboard.writeText(txt); $("copy").textContent="Kopyalandı!"; }
+    catch(_){ $("copy").textContent="Kopyalanamadı"; }
     setTimeout(()=> $("copy").textContent="Kopyala", 1200);
   };
 })();
