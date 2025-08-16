@@ -1,0 +1,293 @@
+<div id="jengal-prompt" style="max-width:920px;margin:24px auto;font-family:system-ui,-apple-system,Segoe UI,Roboto">
+  <style>
+    :root{
+      --bg:#ffffff;           /* arka plan beyaz */
+      --fg:#111111;           /* metin siyah */
+      --muted:#444;           /* ikincil metin */
+      --border:#d7d7d7;       /* kenarlık */
+      --field-bg:#ffffff;     /* input arka plan */
+      --field-fg:#111111;     /* input yazı rengi */
+      --brand:#4f46e5;        /* aksiyon rengi */
+    }
+    .jp-card{background:var(--bg);color:var(--fg);padding:16px;border-radius:12px;border:1px solid var(--border)}
+    .jp-row{display:flex;gap:12px;margin:10px 0;flex-wrap:wrap}
+    .jp-row>input,.jp-row>select,.jp-row>textarea{
+      flex:1;min-width:220px;padding:10px;border-radius:10px;border:1px solid var(--border);
+      background:var(--field-bg);color:var(--field-fg)
+    }
+    .jp-btn{background:var(--brand);color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer}
+    .jp-btn:disabled{opacity:.6;cursor:not-allowed}
+    pre{white-space:pre-wrap;background:#f6f8fa;color:#111;border:1px solid var(--border);padding:12px;border-radius:10px;overflow:auto}
+    .tip{font-size:12px;color:var(--muted)}
+    /* Palette grid */
+    .jp-palettes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:10px 0}
+    .jp-palette{border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .12s ease, box-shadow .12s ease;background:#fff}
+    .jp-palette:hover{transform:translateY(-1px);box-shadow:0 4px 18px rgba(0,0,0,.06)}
+    .jp-palette.selected{outline:2px solid var(--brand)}
+    .sw{height:28px}
+    .swrow{display:flex}
+    .swrow .sw{flex:1}
+    /* Color row */
+    .clr-row{display:grid;grid-template-columns:120px 120px 1fr;gap:10px;align-items:center}
+    .clr-row label{font-size:13px;color:var(--muted)}
+    .alpha{accent-color:var(--brand)}
+    /* Preview */
+    .preview{border:1px dashed var(--border);border-radius:12px;overflow:hidden;background:#fff}
+    .preview-box{height:140px;display:flex;align-items:center;justify-content:center;color:#111}
+    .tag{font-size:12px;background:#eef2ff;color:#1f2937;border:1px solid #c7d2fe;border-radius:999px;padding:2px 8px}
+    .inline-label{display:flex;align-items:center;gap:8px;color:var(--fg)}
+    .file-hint{font-size:12px;color:var(--muted)}
+  </style>
+
+  <div class="jp-card">
+    <h3 style="margin:0 0 6px">Prompt Builder</h3>
+    <div class="tip">Palet seçin veya renkleri ince ayarlayın; ardından “JSON Oluştur”a basın.</div>
+
+    <!-- Üst Alanlar -->
+    <div class="jp-row">
+      <input id="aspect" placeholder="Aspect Ratio (örn: 1024x440)" value="1024x440" />
+      <input id="style" placeholder="Sanatsal Stil" value="cozy, teenage drama" />
+    </div>
+    <div class="jp-row">
+      <input id="theme" placeholder="Tema (ör: teenage, drama, list)" value="teenage, drama, list" />
+    </div>
+
+    <!-- Palet Seçim Alanı -->
+    <div class="jp-row" style="margin-top:6px">
+      <span class="tag">Palette</span>
+    </div>
+    <div class="jp-palettes" id="paletteGrid"></div>
+
+    <!-- Arka Plan Rengi -->
+    <div class="jp-row" style="margin-top:6px">
+      <span class="tag">Background</span>
+    </div>
+    <div class="clr-row">
+      <label>Renk</label>
+      <input id="bgColor" type="color" value="#ffffff" /> <!-- beyaz -->
+      <div>
+        <label>Alfa: <span id="bgAlphaVal">1.00</span></label>
+        <input id="bgAlpha" class="alpha" type="range" min="0" max="1" step="0.01" value="1" />
+      </div>
+    </div>
+
+    <!-- 3 Ana Renk -->
+    <div class="jp-row" style="margin-top:10px">
+      <span class="tag">Primary Colors (3)</span>
+    </div>
+
+    <div class="clr-row">
+      <label>Color 1</label>
+      <input id="c1Color" type="color" value="#eb7865" />
+      <div>
+        <label>Alfa: <span id="c1AlphaVal">1.00</span></label>
+        <input id="c1Alpha" class="alpha" type="range" min="0" max="1" step="0.01" value="1" />
+      </div>
+    </div>
+
+    <div class="clr-row">
+      <label>Color 2</label>
+      <input id="c2Color" type="color" value="#e94da1" />
+      <div>
+        <label>Alfa: <span id="c2AlphaVal">1.00</span></label>
+        <input id="c2Alpha" class="alpha" type="range" min="0" max="1" step="0.01" value="1" />
+      </div>
+    </div>
+
+    <div class="clr-row">
+      <label>Color 3</label>
+      <input id="c3Color" type="color" value="#121212" />
+      <div>
+        <label>Alfa: <span id="c3AlphaVal">1.00</span></label>
+        <input id="c3Alpha" class="alpha" type="range" min="0" max="1" step="0.01" value="1" />
+      </div>
+    </div>
+
+    <!-- Metin / Font -->
+    <div class="jp-row" style="margin-top:8px">
+      <label class="inline-label"><input id="hasText" type="checkbox" checked/> Metin ekle</label>
+      <input id="text" placeholder="Metin" value="Teen drama night"/>
+      <input id="font" placeholder="Font Ailesi" value="Inter"/>
+    </div>
+
+    <!-- Referans Görsel (KALDI) -->
+    <div class="jp-row">
+      <span class="tag">Reference Image</span>
+    </div>
+    <div class="jp-row">
+      <input id="refimg" type="file" accept="image/*" />
+      <span class="file-hint">İsteğe bağlı referans görsel yükleyebilirsiniz (base64 olarak gönderilir).</span>
+    </div>
+
+    <!-- Canlı Önizleme -->
+    <div class="jp-row" style="margin-top:2px">
+      <span class="tag">Preview</span>
+    </div>
+    <div class="preview">
+      <div id="previewBox" class="preview-box">Önizleme</div>
+    </div>
+
+    <!-- Aksiyonlar -->
+    <div class="jp-row" style="margin-top:10px">
+      <button class="jp-btn" id="go">JSON Oluştur</button>
+      <button class="jp-btn" id="copy">Kopyala</button>
+    </div>
+
+    <pre id="out">{ "prompt": "Henüz oluşturulmadı" }</pre>
+    <div class="tip">Not: Değerler API’ye JSON olarak gönderilir ve görsel modeli için prompt nesnesi döner.</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---- AYARLAR ----
+  const API_URL = "https://<railway-app>.up.railway.app/generate-json"; // ← Railway URL’niz
+
+  // ---- HAZIR PALETLER ----
+  const PRESETS = [
+    { name:"Sunset Pop",  colors:["#eb7865","#e94da1","#121212"],  bg:"#ffffff" },
+    { name:"Ocean Mist",  colors:["#76b5c5","#3e8e9f","#0b3c49"],  bg:"#ffffff" },
+    { name:"Forest Glow", colors:["#9be15d","#00e3ae","#0c3b2e"],  bg:"#ffffff" },
+    { name:"Royal Neon",  colors:["#7b5cff","#00e0ff","#001a3d"],  bg:"#ffffff" },
+    { name:"Peach Cream", colors:["#ffd3b6","#ffaaa5","#a8e6cf"],  bg:"#ffffff" },
+    { name:"Cyber Pink",  colors:["#ff77e9","#ff2e63","#252a34"],  bg:"#ffffff" },
+    { name:"Sand Dune",   colors:["#e7d3a8","#b08968","#7f5539"],  bg:"#ffffff" },
+    { name:"Slate Blue",  colors:["#93c5fd","#60a5fa","#1e3a8a"],  bg:"#ffffff" }
+  ];
+
+  // ---- YARDIMCI ----
+  const $ = (id)=>document.getElementById(id);
+  const toRGBA = (hex, a)=> {
+    hex = hex.replace("#","").trim();
+    const r=parseInt(hex.slice(0,2),16), g=parseInt(hex.slice(2,4),16), b=parseInt(hex.slice(4,6),16);
+    return `rgba(${r},${g},${b},${(+a).toFixed(2)})`;
+  };
+  const fileToBase64 = (file)=> new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = ()=>res(String(r.result).split(',')[1]); // sadece base64 parçası
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+
+  // ---- PALET GRID ----
+  const grid = $("paletteGrid");
+  PRESETS.forEach((p, idx)=>{
+    const el = document.createElement("div");
+    el.className = "jp-palette";
+    el.title = p.name;
+    el.dataset.index = idx;
+
+    const row = document.createElement("div");
+    row.className = "swrow";
+    p.colors.forEach(c=>{
+      const sw = document.createElement("div");
+      sw.className = "sw";
+      sw.style.background = c;
+      row.appendChild(sw);
+    });
+    el.appendChild(row);
+
+    const bg = document.createElement("div");
+    bg.className = "sw";
+    bg.style.background = p.bg;
+    el.appendChild(bg);
+
+    el.addEventListener("click", ()=>applyPreset(idx, true));
+    grid.appendChild(el);
+  });
+
+  function clearSelected(){
+    [...grid.children].forEach(n=>n.classList.remove("selected"));
+  }
+  function applyPreset(i, mark){
+    const p = PRESETS[i];
+    $("c1Color").value = p.colors[0];
+    $("c2Color").value = p.colors[1];
+    $("c3Color").value = p.colors[2];
+    $("bgColor").value = p.bg; // beyaz
+    $("c1Alpha").value = $("c2Alpha").value = $("c3Alpha").value = $("bgAlpha").value = "1";
+    updateAlphaLabels();
+    updatePreview();
+    if(mark){ clearSelected(); grid.children[i].classList.add("selected"); }
+  }
+  // Varsayılan palet
+  applyPreset(0, true);
+
+  // ---- ALFA LABEL/ÖNİZLEME ----
+  function updateAlphaLabels(){
+    $("bgAlphaVal").textContent = (+$("bgAlpha").value).toFixed(2);
+    $("c1AlphaVal").textContent = (+$("c1Alpha").value).toFixed(2);
+    $("c2AlphaVal").textContent = (+$("c2Alpha").value).toFixed(2);
+    $("c3AlphaVal").textContent = (+$("c3Alpha").value).toFixed(2);
+  }
+  ["bgAlpha","c1Alpha","c2Alpha","c3Alpha"].forEach(id=>$(id).addEventListener("input",()=>{updateAlphaLabels();updatePreview();}));
+  ["bgColor","c1Color","c2Color","c3Color"].forEach(id=>$(id).addEventListener("input",updatePreview));
+
+  function updatePreview(){
+    const bg = $("bgColor").value, ba = $("bgAlpha").value;
+    const c1 = $("c1Color").value, a1 = $("c1Alpha").value;
+    const c2 = $("c2Color").value, a2 = $("c2Alpha").value;
+    const c3 = $("c3Color").value, a3 = $("c3Alpha").value;
+
+    const grad = `linear-gradient(90deg, ${toRGBA(c1,a1)} 0%, ${toRGBA(c2,a2)} 50%, ${toRGBA(c3,a3)} 100%)`;
+    const box = $("previewBox");
+    box.style.background = `linear-gradient(${toRGBA(bg,ba)}, ${toRGBA(bg,ba)}), ${grad}`;
+    box.style.color = "#111"; // önizleme yazısı siyah
+  }
+  updatePreview();
+  updateAlphaLabels();
+
+  // ---- JSON OLUŞTURMA/POST ----
+  $("go").onclick = async () => {
+    try {
+      $("go").disabled = true;
+      $("go").textContent = "Oluşturuluyor...";
+
+      const body = {
+        aspectRatio: $("aspect").value,
+        primaryColors: [
+          { hex: $("c1Color").value, alpha: +$("c1Alpha").value },
+          { hex: $("c2Color").value, alpha: +$("c2Alpha").value },
+          { hex: $("c3Color").value, alpha: +$("c3Alpha").value }
+        ],
+        theme: "Özel",
+        customTheme: $("theme").value,
+        includeText: $("hasText").checked,
+        text: $("text").value,
+        fontFamily: $("font").value,
+        backgroundColor: { hex: $("bgColor").value, alpha: +$("bgAlpha").value },  // beyaz + alfa
+        style: $("style").value,
+        referenceImageBase64: null
+      };
+
+      const refFile = $("refimg").files?.[0];
+      if (refFile) {
+        const b64 = await fileToBase64(refFile);
+        body.referenceImageBase64 = "data:" + (refFile.type || "image/png") + ";base64," + b64;
+      }
+
+      const resp = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        credentials: "omit"
+      });
+
+      const data = await resp.json();
+      $("out").textContent = JSON.stringify(data, null, 2);
+    } catch (e) {
+      $("out").textContent = JSON.stringify({error: String(e)}, null, 2);
+    } finally {
+      $("go").disabled = false;
+      $("go").textContent = "JSON Oluştur";
+    }
+  };
+
+  $("copy").onclick = async () => {
+    const txt = $("out").textContent || "";
+    try { await navigator.clipboard.writeText(txt); $("copy").textContent="Kopyalandı!"; }
+    catch(_) { $("copy").textContent="Kopyalanamadı"; }
+    setTimeout(()=> $("copy").textContent="Kopyala", 1200);
+  };
+})();
+</script>
